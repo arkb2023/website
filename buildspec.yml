@@ -1,0 +1,16 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Pre-build phase (stub)"
+  build:
+    commands:
+      - echo "Build phase (stub) - Docker build will go here"
+  post_build:
+    commands:
+      - echo "Post-build phase (stub) - Docker push will go here"
+
+artifacts:
+  files:
+    - '**/*'
