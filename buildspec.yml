@@ -20,6 +20,7 @@ env:
   secrets-manager:  # Change to secrets-manager (JSON secrets)
     DOCKERHUB_USERNAME: "$DOCKERHUB_SECRET:username"  # secret:json-key
     DOCKERHUB_PASSWORD: "$DOCKERHUB_SECRET:password"
+
 phases:
   pre_build:
     commands:
