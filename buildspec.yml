@@ -1,16 +1,40 @@
-version: 0.2
+# version: 0.2
 
+# phases:
+#   pre_build:
+#     commands:
+#       - echo "Pre-build phase (stub)"
+#   build:
+#     commands:
+#       - echo "Build phase (stub) - Docker build will go here"
+#   post_build:
+#     commands:
+#       - echo "Post-build phase (stub) - Docker push will go here"
+
+# artifacts:
+#   files:
+#     - '**/*'
+
+version: 0.2
+env:
+  secrets-manager:  # Change to secrets-manager (JSON secrets)
+    DOCKERHUB_USERNAME: "$DOCKERHUB_SECRET:username"  # secret:json-key
+    DOCKERHUB_PASSWORD: "$DOCKERHUB_SECRET:password"
 phases:
   pre_build:
     commands:
-      - echo "Pre-build phase (stub)"
+      - echo Logging into Docker Hub...
+      - aws secretsmanager get-secret-value --secret-id $DOCKERHUB_SECRET --query SecretString --output text | \
+        jq -r '.password' | \
+        docker login --username $DOCKERHUB_USERNAME --password-stdin
   build:
     commands:
-      - echo "Build phase (stub) - Docker build will go here"
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)  # e.g., abc1234
+      - echo Building $IMAGE_TAG...
+      - docker build -t arkb2023/website:$IMAGE_TAG .
+      - docker tag arkb2023/website:$IMAGE_TAG arkb2023/website:latest
   post_build:
     commands:
-      - echo "Post-build phase (stub) - Docker push will go here"
-
-artifacts:
-  files:
-    - '**/*'
+      - echo Pushing...
+      - docker push arkb2023/website:$IMAGE_TAG
+      - docker push arkb2023/website:latest
