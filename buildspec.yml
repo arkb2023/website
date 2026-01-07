@@ -1,19 +1,19 @@
-version: 0.2
+# version: 0.2
 
-phases:
-  pre_build:
-    commands:
-      - echo "Pre-build phase (stub)"
-  build:
-    commands:
-      - echo "Build phase (stub) - Docker build will go here"
-  post_build:
-    commands:
-      - echo "Post-build phase (stub) - Docker push will go here"
+# phases:
+#   pre_build:
+#     commands:
+#       - echo "Pre-build phase (stub)"
+#   build:
+#     commands:
+#       - echo "Build phase (stub) - Docker build will go here"
+#   post_build:
+#     commands:
+#       - echo "Post-build phase (stub) - Docker push will go here"
 
-artifacts:
-  files:
-    - '**/*'
+# artifacts:
+#   files:
+#     - '**/*'
 
 # version: 0.2
 # env:
@@ -39,3 +39,28 @@ artifacts:
 #       - echo Pushing...
 #       - docker push arkb2023/website:$IMAGE_TAG
 #       - docker push arkb2023/website:latest
+
+version: 0.2
+env:
+  secrets-manager:
+    DOCKERHUB_USERNAME: "codebuild/dockerhub/creds:username"
+    DOCKERHUB_PASSWORD: "codebuild/dockerhub/creds:password"
+phases:
+  pre_build:
+    commands:
+      - echo "Logging into Docker Hub..."
+      - echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+  build:
+    commands:
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - echo "Building $IMAGE_TAG..."
+      - docker build -t arkb2023/website:$IMAGE_TAG .
+      - docker tag arkb2023/website:$IMAGE_TAG arkb2023/website:latest
+  post_build:
+    commands:
+      - echo "Pushing to Docker Hub..."
+      - docker push arkb2023/website:$IMAGE_TAG
+      - docker push arkb2023/website:latest
+      - echo "Image pushed successfully"
+
+#cd ~/workspace/website && git add buildspec.yml && git commit -m "docker hub push working" && git push origin main
