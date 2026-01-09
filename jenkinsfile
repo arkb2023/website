@@ -27,6 +27,7 @@ pipeline {
                     sh '''
                     export KUBECONFIG=/home/ubuntu/.kube/config
                     kubectl set image deployment/website-dep website=${DOCKER_IMAGE}:latest
+                    kubectl rollout restart deployment/website-dep
                     kubectl rollout status deployment/website-dep --timeout=300s
                     '''
                 }
