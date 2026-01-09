@@ -7,53 +7,56 @@ pipeline {
     }
     
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-        
-        stage('Build Docker Image') {
+        stage('Check Latest Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
-                    docker.build("${DOCKER_IMAGE}:latest")
+                    // Get latest Docker Hub image digest
+                    sh '''
+                    LATEST_DIGEST=$(curl -s "https://hub.docker.com/v2/repositories/arkb2023/website/tags/latest" | jq -r '.images[0].digest')
+                    echo "Latest Docker Hub digest: $LATEST_DIGEST"
+                    echo "LATEST_DIGEST=$LATEST_DIGEST" > docker_image.env
+                    '''
                 }
             }
         }
         
-        stage('Push to Docker Hub') {
+        stage('Deploy Latest Image to K3s') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
-                        docker.image("${DOCKER_IMAGE}:${BUILD_NUMBER}").push()
-                        docker.image("${DOCKER_IMAGE}:latest").push()
-                    }
-                }
-            }
-        }
-        
-        stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    sh """
-                    kubectl rollout restart deployment/website-dep
+                    env.LATEST_DIGEST = sh(script: 'cat docker_image.env | cut -d= -f2', returnStdout: true).trim()
+                    sh '''
+                    export KUBECONFIG=/home/ubuntu/.kube/config
+                    kubectl set image deployment/website-dep website=${DOCKER_IMAGE}:latest
                     kubectl rollout status deployment/website-dep --timeout=300s
-                    """
+                    '''
                 }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                export KUBECONFIG=/home/ubuntu/.kube/config
+                kubectl get pods -l app=website -o wide
+                kubectl get svc website-svc
+                curl -s http://localhost:30008/ | head -20
+                '''
             }
         }
     }
     
     post {
         always {
-            sh 'kubectl get pods,svc'
+            sh '''
+            export KUBECONFIG=/home/ubuntu/.kube/config
+            kubectl get pods,svc,deployments -o wide
+            '''
         }
         success {
-            echo 'Pipeline SUCCESSFUL!'
+            echo 'New Docker image deployed to K8s successfully!'
         }
         failure {
-            echo 'Pipeline FAILED!'
+            echo 'Deployment failed!'
         }
     }
 }
