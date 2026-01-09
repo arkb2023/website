@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_IMAGE = 'arkb2023/website'
+        KUBECONFIG = '/home/ubuntu/.kube/config'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
+                    docker.build("${DOCKER_IMAGE}:latest")
+                }
+            }
+        }
+        
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
+                        docker.image("${DOCKER_IMAGE}:${BUILD_NUMBER}").push()
+                        docker.image("${DOCKER_IMAGE}:latest").push()
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    sh """
+                    kubectl rollout restart deployment/website-dep
+                    kubectl rollout status deployment/website-dep --timeout=300s
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            sh 'kubectl get pods,svc'
+        }
+        success {
+            echo 'Pipeline SUCCESSFUL!'
+        }
+        failure {
+            echo 'Pipeline FAILED!'
+        }
+    }
+}
