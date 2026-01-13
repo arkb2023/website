@@ -43,8 +43,11 @@
 version: 0.2
 env:
   secrets-manager:
-    DOCKERHUB_USERNAME: "codebuild/dockerhub/creds:username"
-    DOCKERHUB_PASSWORD: "codebuild/dockerhub/creds:password"
+    DOCKERHUB_USERNAME: "codebuild/dockerhub/credentials:username"
+    DOCKERHUB_PASSWORD: "codebuild/dockerhub/credentials:password"
+    #DOCKERHUB_CREDS: "project2-dockerhub-pat"
+    #GITHUB_TOKEN: "project2-github-pat"
+
 phases:
   pre_build:
     commands:
