@@ -80,17 +80,16 @@ pipeline {
     }
     
     post {
-        always {
+        success {
             sh '''
             export KUBECONFIG=/home/ubuntu/.kube/config
             kubectl get pods,svc,deployments -o wide
             '''
-        }
-        success {
             echo 'New Docker image deployed to K8s successfully!'
         }
         failure {
             echo 'Deployment failed or blocked by release gate!'
+            echo 'Check: Is this main branch on 25th of month?'
         }
     }
 }
