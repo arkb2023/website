@@ -13,7 +13,7 @@ pipeline {
                 script {
                     def today = new Date()
                     def dayOfMonth = today[Calendar.DAY_OF_MONTH]
-                    def branch = env.BRANCH_NAME ?: sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    def branch = env.BRANCH_NAME ?: 'main'
 
                     echo "════════════════════════════════════════════════════"
                     echo "Release Gate Check"
