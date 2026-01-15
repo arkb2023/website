@@ -7,6 +7,39 @@ pipeline {
     }
     
     stages {
+        // 25th Release Gate
+        stage('25th Release Gate') {
+            steps {
+                script {
+                    def today = new Date()
+                    def dayOfMonth = today[Calendar.DAY_OF_MONTH]
+                    def branch = env.BRANCH_NAME ?: sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+
+                    echo "════════════════════════════════════════════════════"
+                    echo "Release Gate Check"
+                    echo "════════════════════════════════════════════════════"
+                    echo "Current Date: ${today.format('yyyy-MM-dd HH:mm:ss')} (Day ${dayOfMonth}/25)"
+                    echo "Branch: ${branch}"
+
+                    // STRICT: Only main branch allowed + only on 25th
+                    if (branch != 'main') {
+                        echo "Production Server deployment allowed from main branch only!"
+                        error("BLOCKED: Production Sserver deployment allowed from main branch only!")
+                    }
+                    if (dayOfMonth != 25) {
+                        echo "Releases to Production Server allowed on 25th of month only"
+                        error("BLOCKED: Releases to Production Server allowed on 25th of month only")
+                    }
+                    // Approve deployments
+                    echo ""
+                    echo "Release Approved"
+                    echo "════════════════════════════════════════════════════"
+
+                    echo ""
+                }
+            }
+        }
+
         stage('Check Latest Docker Image') {
             steps {
                 script {
@@ -57,7 +90,7 @@ pipeline {
             echo 'New Docker image deployed to K8s successfully!'
         }
         failure {
-            echo 'Deployment failed!'
+            echo 'Deployment failed or blocked by release gate!'
         }
     }
 }
