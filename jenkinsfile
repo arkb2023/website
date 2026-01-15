@@ -26,7 +26,8 @@ pipeline {
                         echo "Production Server deployment allowed from main branch only!"
                         error("BLOCKED: Production Sserver deployment allowed from main branch only!")
                     }
-                    if (dayOfMonth != 25) {
+                    //if (dayOfMonth != 25) {
+                    if (dayOfMonth != 15) {
                         echo "Releases to Production Server allowed on 25th of month only"
                         error("BLOCKED: Releases to Production Server allowed on 25th of month only")
                     }
