@@ -20,22 +20,22 @@ pipeline {
                     echo "════════════════════════════════════════════════════"
                     echo "Current Date: ${today.format('yyyy-MM-dd HH:mm:ss')} (Day ${dayOfMonth}/25)"
                     echo "Branch: ${branch}"
-
-                    // STRICT: Only main branch allowed + only on 25th
-                    if (branch != 'main') {
-                        echo "Production Server deployment allowed from main branch only!"
-                        error("BLOCKED: Production Sserver deployment allowed from main branch only!")
-                    }
-                    //if (dayOfMonth != 25) {
-                    if (dayOfMonth != 15) {
-                        echo "Releases to Production Server allowed on 25th of month only"
-                        error("BLOCKED: Releases to Production Server allowed on 25th of month only")
-                    }
-                    // Approve deployments
-                    echo ""
-                    echo "Release Approved"
                     echo "════════════════════════════════════════════════════"
 
+                    // Set global variable for downstream stages
+                    env.DEPLOY_APPROVED = (branch == 'main' && dayOfMonth == 25) ? 'true' : 'false'
+
+                    if (env.DEPLOY_APPROVED == 'true') {
+                        echo "Release Approved: Main branch on 25th - proceeding with K3s deployment"
+                    } else {
+                        if (branch != 'main') {
+                            echo "Main branch commits only: Feature branch detected - skipping deployment"
+                        }
+                        if (dayOfMonth != 25) {
+                            echo "25th release only: Current date is ${dayOfMonth} - skipping deployment"
+                        }
+                        echo "Build continues; deployment stage will be skipped"
+                    }
                     echo ""
                 }
             }
@@ -55,6 +55,9 @@ pipeline {
         }
         
         stage('Deploy Latest Image to K3s') {
+            when {
+                expression { env.DEPLOY_APPROVED == 'true' }
+            }
             steps {
                 script {
                     env.LATEST_DIGEST = sh(script: 'cat docker_image.env | cut -d= -f2', returnStdout: true).trim()
@@ -69,12 +72,15 @@ pipeline {
         }
         
         stage('Verify Deployment') {
+            when {
+                expression { env.DEPLOY_APPROVED == 'true' }
+            }
             steps {
                 sh '''
                 export KUBECONFIG=/home/ubuntu/.kube/config
                 kubectl get pods -l app=website -o wide
                 kubectl get svc website-svc
-                curl -s http://localhost:30008/ | head -20
+                curl -s http://worker3:30008/ | head -20
                 '''
             }
         }
@@ -82,15 +88,21 @@ pipeline {
     
     post {
         success {
-            sh '''
-            export KUBECONFIG=/home/ubuntu/.kube/config
-            kubectl get pods,svc,deployments -o wide
-            '''
-            echo 'New Docker image deployed to K8s successfully!'
+            script {
+                if (env.DEPLOY_APPROVED == 'true') {
+                    sh '''
+                    export KUBECONFIG=/home/ubuntu/.kube/config
+                    kubectl get pods,svc,deployments -o wide
+                    '''
+                    echo 'New Docker image deployed to K3s successfully!'
+                } else {
+                    echo 'Build completed successfully. Deployment skipped (not 25th or not main branch).'
+                }
+            }
         }
         failure {
-            echo 'Deployment failed or blocked by release gate!'
-            echo 'Check: Is this main branch on 25th of month?'
+            echo 'Build or deployment failed!'
+            echo 'Check deployment logs for details.'
         }
     }
 }
