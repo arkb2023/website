@@ -23,7 +23,7 @@ pipeline {
                     echo "════════════════════════════════════════════════════"
 
                     // Set global variable for downstream stages
-                    env.DEPLOY_APPROVED = (branch == 'main' && dayOfMonth == 25) ? 'true' : 'false'
+                    env.DEPLOY_APPROVED = (branch == 'main' && dayOfMonth == 18) ? 'true' : 'false'
 
                     if (env.DEPLOY_APPROVED == 'true') {
                         echo "Release Approved: Main branch on 25th - proceeding with K3s deployment"
